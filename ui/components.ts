@@ -22,7 +22,7 @@ import m, {
   Attributes,
   Children,
   ComponentTypes,
-  CommonAttributes,
+  Lifecycle,
   ClosureComponent,
   Vnode,
 } from "mithril";
@@ -39,7 +39,7 @@ import tags from "./components/tags";
 import ping from "./components/ping";
 import deviceLink from "./components/device-link";
 import longTextComponent from "./long-text-component";
-import loading from "./components/loading";
+import deviceUploads from "./components/device-uploads";
 
 const comps = {
   parameter,
@@ -55,7 +55,7 @@ const comps = {
   ping,
   "device-link": deviceLink,
   "long-text": longTextComponent,
-  loading: loading,
+  "device-uploads": deviceUploads,
 };
 
 const contextifiedComponents = new WeakMap<ComponentTypes, ComponentTypes>();
@@ -81,7 +81,7 @@ interface MC extends Static {
     <Attrs, State>(
       ctx: Attributes,
       component: ComponentTypes<Attrs, State>,
-      attributes: Attrs & CommonAttributes<Attrs, State>,
+      attributes: Attrs & Lifecycle<Attrs, State> & { key?: string | number },
       ...args: Children[]
     ): Vnode<Attrs, State>;
   };
@@ -116,7 +116,7 @@ function applyContext(vnode, parentContext): void {
       vnodeContext.set(vnode, vc);
       vnode.attrs = Object.assign({}, vc, vnode.attrs);
     }
-    if (vnode.children?.length)
+    if (vnode.children && vnode.children.length)
       for (const c of vnode.children) applyContext(c, vc);
   }
 }
@@ -133,26 +133,15 @@ export function contextifyComponent(component: ComponentTypes): ComponentTypes {
         applyContext(res, context);
         return res;
       };
-    } else if (!component.prototype?.view) {
+    } else if (!component.prototype || !component.prototype.view) {
       c = (initialNode) => {
         const state = (component as ClosureComponent)(initialNode);
         const view = state.view;
         state.view = function (vnode) {
           const context = vnodeContext.get(vnode) || {};
-          try {
-            const res = Reflect.apply(view, this, [vnode]);
-            applyContext(res, context);
-            return res;
-          } catch (err) {
-            return m(
-              "p.error",
-              {
-                title: "Click to print stack trace to console",
-                onclick: () => console.error(err),
-              },
-              "Error!"
-            );
-          }
+          const res = Reflect.apply(view, this, [vnode]);
+          applyContext(res, context);
+          return res;
         };
         return state;
       };
