@@ -1,5 +1,5 @@
 {
-  "name": "genieacs",
+  "name": "genieacs_xmpp",
   "version": "1.2.8",
   "description": "A TR-069 Auto Configuration Server (ACS)",
   "repository": {
