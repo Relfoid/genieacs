@@ -372,7 +372,7 @@ export default class XmppClient extends EventEmitter {
           socket.on("data", client._onData.bind(client));
           socket.on("error", client._onError.bind(client));
           if (opts.timeout)
-            socket.setTimeout(opts.timeout, client.close.bind(client));
+            socket.setTimeout(opts.timeout, function() {client.close.bind(client); this.emit("timeout");});
           resolve(client);
         } catch (err) {
           socket.destroy();
@@ -383,6 +383,10 @@ export default class XmppClient extends EventEmitter {
   }
 
   close(): void {
+    this._socket.end("</stream>");
+  }
+  
+  timeout(): void {
     this._socket.end("</stream>");
   }
 

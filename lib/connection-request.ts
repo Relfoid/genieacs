@@ -245,6 +245,7 @@ export async function udpConnectionRequest(
 const XMPP_JID = config.get("XMPP_JID") as string;
 const XMPP_PASSWORD = config.get("XMPP_PASSWORD") as string;
 const XMPP_RESOURCE = crypto.randomBytes(8).toString("hex");
+debug.general("RELF", XMPP_JID + " " + XMPP_PASSWORD);
 
 let xmppClient: XmppClient;
 
@@ -255,10 +256,12 @@ function xmppClientOnError(err: Error): void {
     exception: err,
     pid: process.pid,
   });
+  debug.general("xmppConnectionRequest " + XMPP_JID, "Error");
 }
 
 function xmppClientOnClose(): void {
   xmppClient = null;
+  debug.general("xmppConnectionRequest " + XMPP_JID, "Close");
 }
 
 export async function xmppConnectionRequest(
@@ -269,18 +272,27 @@ export async function xmppConnectionRequest(
   deviceId: string
 ): Promise<string> {
   if (!xmppClient) {
+    debug.general("xmppConnectionRequest " + XMPP_JID, "New XMPP");
     const [host, username] = XMPP_JID.split("@").reverse();
     xmppClient = await XmppClient.connect({
       host,
       username,
       resource: XMPP_RESOURCE,
       password: XMPP_PASSWORD,
-      timeout: 120000,
+      timeout: 60000,
     });
     xmppClient.on("error", xmppClientOnError);
     xmppClient.on("close", xmppClientOnClose);
+    xmppClient.on("timeout", xmppClientOnClose);
     xmppClient.unref();
+  } else {
+    debug.general("xmppConnectionRequest " + XMPP_JID, "Existing XMPP");
   }
+
+  debug.general(
+    "xmppConnectionRequest " + XMPP_JID,
+    jid + " " + authExp + " " + timeout + " " + _debug + " " + deviceId
+  );
 
   let username: string;
   let password: string;
@@ -302,6 +314,7 @@ export async function xmppConnectionRequest(
         timeout
       ));
     } catch (err) {
+      debug.general(XMPP_JID, err.message);
       return err.message;
     }
     if (_debug) {
@@ -313,14 +326,16 @@ export async function xmppConnectionRequest(
     if (type && type.value === "result") return "";
     const error = res.children.find((c) => c.name === "error");
     if (!error || !error.children[0])
-      return "Unexpected XMPP connection request response";
+      debug.general(XMPP_JID, "Unexpected XMPP connection request response");
+    return "Unexpected XMPP connection request response";
     if (error.children[0].name === "service-unavailable")
-      return "Device is offline";
+      debug.general(XMPP_JID, "Device is offline");
+    return "Device is offline";
     if (error.children[0].name !== "not-authorized")
-      return "Unexpected XMPP connection request response";
+      debug.general(XMPP_JID, "Unexpected XMPP connection request response");
+    return "Unexpected XMPP connection request response";
     [username, password, authExp] = await extractAuth(authExp, null);
   }
+  debug.general(XMPP_JID, "Incorrect connection request credentials");
   return "Incorrect connection request credentials";
 }
-
-xmppConnectionRequest("acs@aquaplace.co.uk", "", 1000, false, "acs").then(console.log).catch(console.error);
