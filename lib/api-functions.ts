@@ -381,6 +381,5 @@ export async function deleteDevice(deviceId: string): Promise<void> {
       },
     }),
     cache.del(`${deviceId}_tasks_faults_operations`),
-    db.deleteDeviceUploads(deviceId),
   ]);
 }

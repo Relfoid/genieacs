@@ -58,10 +58,6 @@ export async function deleteResource(
       await db.deleteFile(id);
       break;
 
-    case "uploads":
-      await db.deleteUpload(id);
-      break;
-
     case "faults":
       await deleteFault(id);
       break;
