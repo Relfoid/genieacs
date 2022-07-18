@@ -1118,7 +1118,7 @@ export async function rpcRequest(
     return rpcRequest(sessionContext, null);
   }
 
-  if (sessionContext.rpcCount >= 255) {
+  if (sessionContext.rpcCount >= 1024) {
     return {
       fault: {
         code: "too_many_rpcs",
